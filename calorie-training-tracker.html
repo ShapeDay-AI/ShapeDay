@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="ShapeDay">
 <meta name="theme-color" content="#4f46e5">
 <meta name="description" content="Calorie & Training Tracker — deficit, body metrics, gym volume">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2356ab2f'/%3E%3Cstop offset='100%25' stop-color='%23243b0e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='114' fill='url(%23g)'/%3E%3Cpath d='M160 340 L200 240 L256 300 L310 180 L352 260' stroke='white' stroke-width='28' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='352' cy='260' r='18' fill='white'/%3E%3Cpath d='M120 370 L392 370' stroke='rgba(255,255,255,0.3)' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563eb'/%3E%3Cstop offset='100%25' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='112' fill='url(%23bg)'/%3E%3Ctext x='256' y='348' font-family='Helvetica Neue%2CArial%2Csans-serif' font-size='320' font-weight='900' text-anchor='middle' fill='white'%3ES%3C%2Ftext%3E%3C%2Fsvg%3E">
 <title>ShapeDay</title>
 <style>
 :root{
@@ -539,6 +539,41 @@ canvas{width:100%;height:100%;display:block;}
 .gsheet-qbtn:active,.gsheet-qbtn.on{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border-color:transparent;}
 .gsheet-save{width:100%;border:none;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border-radius:14px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(79,70,229,.35);}
 .gsheet-save:active{opacity:.9;}
+
+/* Quick kcal input on meal head */
+.meal2-quick{display:flex;align-items:center;gap:6px;padding:0 14px 11px;}
+.meal2-quick input{
+  flex:1;border:none;background:var(--panel2);border-radius:10px;
+  padding:8px 11px;font-size:14px;font-family:monospace;color:var(--text);
+  outline:none;transition:box-shadow .15s;
+}
+.meal2-quick input:focus{box-shadow:0 0 0 2px var(--accent);}
+.meal2-quick input::placeholder{color:#bbb;}
+.meal2-quick-btn{
+  border:none;cursor:pointer;border-radius:10px;
+  padding:8px 13px;font-size:13px;font-weight:700;font-family:inherit;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;
+  box-shadow:0 2px 10px rgba(79,70,229,.35);
+  transition:transform .1s,box-shadow .1s;
+  white-space:nowrap;flex-shrink:0;
+}
+.meal2-quick-btn:active{transform:scale(.95);box-shadow:0 1px 4px rgba(79,70,229,.2);}
+
+/* Beautiful Add food chevron button */
+.meal2-chev{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:#fff;
+  transition:transform .25s, box-shadow .2s;
+  flex-shrink:0;
+  box-shadow:0 3px 12px rgba(79,70,229,.4);
+}
+.meal2-chev::after{content:'+';}
+.meal2.open .meal2-chev{
+  transform:rotate(45deg);
+  box-shadow:0 2px 8px rgba(79,70,229,.25);
+}
 </style>
 </head>
 <body>
@@ -743,9 +778,16 @@ canvas{width:100%;height:100%;display:block;}
         <div class="gsheet-fsub" id="gsSub">per 100g</div>
       </div>
     </div>
-    <div class="gsheet-kcal-big">
-      <div class="gsheet-kcal-num" id="gsKcal">0</div>
-      <div class="gsheet-kcal-lbl">calories</div>
+    <div class="gsheet-kcal-big" id="gsKcalBig" title="Tap to enter manually">
+      <div id="gsKcalDisplay">
+        <div class="gsheet-kcal-num" id="gsKcal">0</div>
+        <div class="gsheet-kcal-lbl">tap to edit calories</div>
+      </div>
+      <div id="gsKcalEdit" style="display:none;">
+        <input id="gsKcalInp" type="number" inputmode="numeric"
+          style="font-size:44px;font-weight:800;font-family:monospace;text-align:center;width:160px;border:none;border-bottom:3px solid var(--accent);background:transparent;outline:none;color:var(--accent);">
+        <div class="gsheet-kcal-lbl" style="color:var(--accent);">kcal → grams auto-adjusts</div>
+      </div>
     </div>
     <div class="gsheet-gram-display">
       <div class="gsheet-gram-val" id="gsGramVal">100</div>
@@ -1178,9 +1220,36 @@ function renderDetail(){
     var nameEl=document.createElement('div');nameEl.className='meal2-name';nameEl.textContent=slot.label;
     var metaEl=document.createElement('div');metaEl.className='meal2-meta';
     info.appendChild(nameEl);info.appendChild(metaEl);
-    var chev=document.createElement('div');chev.className='meal2-chev';chev.innerHTML='&#9656;';
+    // Beautiful + button (not a dull arrow)
+    var chev=document.createElement('div');chev.className='meal2-chev';
     head.appendChild(ring);head.appendChild(info);head.appendChild(chev);
     meal.appendChild(head);
+
+    // ── QUICK KCAL ROW (visible even when collapsed) ──
+    var quickRow=document.createElement('div');quickRow.className='meal2-quick';
+    var quickInp=document.createElement('input');
+    quickInp.type='text';quickInp.inputMode='numeric';
+    quickInp.placeholder='Quick add kcal…';
+    var quickBtn=document.createElement('button');
+    quickBtn.type='button';quickBtn.className='meal2-quick-btn';
+    quickBtn.textContent='Add';
+    quickBtn.addEventListener('click',function(){
+      var v=parseFloat(quickInp.value)||0;
+      if(!v)return;
+      // Add as generic "Manual entry" item
+      d[slot.items].push({n:'Manual entry',e:'\u270F\uFE0F',p:0,g:0,k:v,manual:true});
+      quickInp.value='';
+      renderItems();refreshMeal();
+      // briefly open to show added item
+      meal.classList.add('open');
+    });
+    quickInp.addEventListener('keydown',function(e){
+      if(e.key==='Enter'){e.preventDefault();quickBtn.click();}
+    });
+    // stop click on quickRow from toggling accordion
+    quickRow.addEventListener('click',function(e){e.stopPropagation();});
+    quickRow.appendChild(quickInp);quickRow.appendChild(quickBtn);
+    meal.appendChild(quickRow);
 
     // ── BODY ──
     var bodyWrap=document.createElement('div');bodyWrap.className='meal2-body';
@@ -1264,6 +1333,19 @@ function renderDetail(){
 
     head.addEventListener('click',function(){
       meal.classList.toggle('open');
+    });
+    // chev/+ button click → open food picker directly
+    chev.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(!meal.classList.contains('open'))meal.classList.add('open');
+      openFp2(slot,function(food){
+        openGramSheet({n:food.n,e:food.e,p:food.p,g:food.g,k:food.k},slot,function(grams,kcal){
+          d[slot.items].push({n:food.n,e:food.e,p:food.p,g:grams,k:kcal});
+          renderItems();refreshMeal();
+          if(!D.foodFreq)D.foodFreq={};
+          D.foodFreq[food.n]=(D.foodFreq[food.n]||0)+1;save();
+        });
+      });
     });
 
     renderItems();refreshMeal();
@@ -1917,7 +1999,7 @@ var FOODS=[
   {e:'🧀',n:'Cottage cheese',s:'100g',k:98,g:100,p:98,cat:'Eggs & Dairy'},
   {e:'🫙',n:'Greek yogurt',s:'150g',k:133,g:150,p:89,cat:'Eggs & Dairy'},
   {e:'🫙',n:'Yogurt (plain)',s:'150g',k:84,g:150,p:56,cat:'Eggs & Dairy'},
-  {e:'🧈',n:'Butter',s:'10g pat',k:72,g:10,p:720,cat:'Eggs & Dairy'},
+  {e:'🧈',n:'Butter',s:'1 tbsp, 14g',k:100,g:14,p:717,cat:'Eggs & Dairy'},
   // 🍗 Meat & Fish
   {e:'🍗',n:'Chicken breast',s:'150g cooked',k:248,g:150,p:165,cat:'Meat & Fish'},
   {e:'🍗',n:'Chicken thigh',s:'150g cooked',k:295,g:150,p:197,cat:'Meat & Fish'},
@@ -1969,7 +2051,7 @@ var FOODS=[
   // 🥜 Nuts & Fats
   {e:'🥜',n:'Peanut butter',s:'2 tbsp, 32g',k:190,g:32,p:594,cat:'Nuts & Fats'},
   {e:'🫒',n:'Olive oil',s:'1 tbsp, 14g',k:119,g:14,p:850,cat:'Nuts & Fats'},
-  {e:'🥑',n:'Avocado',s:'½ medium, 75g',k:120,g:75,p:160,cat:'Nuts & Fats'},
+  {e:'🥑',n:'Avocado',s:'½ medium, 68g edible',k:109,g:68,p:160,cat:'Nuts & Fats'},
   {e:'🥜',n:'Almonds',s:'30g handful',k:173,g:30,p:577,cat:'Nuts & Fats'},
   {e:'🥜',n:'Walnuts',s:'30g',k:196,g:30,p:653,cat:'Nuts & Fats'},
   {e:'🥜',n:'Cashews',s:'30g',k:163,g:30,p:543,cat:'Nuts & Fats'},
@@ -2078,47 +2160,115 @@ function openGramSheet(food,slot,onSave){
   document.getElementById('gsName').textContent=food.n;
   document.getElementById('gsSub').textContent=food.p+' kcal per 100g';
   var sl=document.getElementById('gsSlider');
-  // dynamic max: if default grams big, raise ceiling
-  var maxG=Math.max(500,Math.ceil((food.g||100)*2/50)*50);
-  sl.max=maxG;
+  var maxG=Math.max(500,Math.ceil((food.g||100)*2.5/50)*50);
+  sl.min=5; sl.max=maxG; sl.step=5; sl.value=gsGrams;
   document.querySelector('.gsheet-ticks').innerHTML='<span>5g</span><span>'+Math.round(maxG/2)+'g</span><span>'+maxG+'g</span>';
-  sl.value=gsGrams;
-  // quick chips relative to portion
-  var qc=document.getElementById('gsQuick');qc.innerHTML='';
+  // Portion chips: ½, 1, 1½, 2 × default portion
   var base=food.g||100;
-  var presets=[Math.round(base*0.5),base,Math.round(base*1.5),Math.round(base*2)];
-  // dedupe + sort
-  presets=presets.filter(function(v,i,a){return v>0&&a.indexOf(v)===i;}).sort(function(a,b){return a-b;});
-  presets.forEach(function(g){
-    var b=document.createElement('button');b.className='gsheet-qbtn'+(g===gsGrams?' on':'');b.textContent=g+'g';b.type='button';
-    b.addEventListener('click',function(){gsGrams=g;sl.value=g;gsUpdate();});
+  var CHIP_LABELS=[
+    {mult:0.5, label:'\u00BD portion', g:Math.round(base*0.5)},
+    {mult:1,   label:'1 portion',       g:base},
+    {mult:1.5, label:'1\u00BD',         g:Math.round(base*1.5)},
+    {mult:2,   label:'2 portions',      g:Math.round(base*2)}
+  ];
+  var qc=document.getElementById('gsQuick');qc.innerHTML='';
+  CHIP_LABELS.forEach(function(chip){
+    var g=chip.g; if(g<=0)return;
+    var b=document.createElement('button');b.className='gsheet-qbtn'+(g===gsGrams?' on':'');b.type='button';
+    // two lines: label + grams
+    b.innerHTML='<span style="display:block;font-size:11px;font-weight:700;">'+chip.label+'</span><span style="display:block;font-size:10px;font-weight:400;opacity:.75;margin-top:1px;">'+g+'g</span>';
+    b.style.cssText='flex:1;border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:7px 4px;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center;';
+    b.addEventListener('click',function(){
+      gsGrams=g; sl.value=g;
+      gsHideEdit();
+      gsUpdate();
+    });
     qc.appendChild(b);
   });
+  gsHideEdit();
   gsUpdate();
   document.getElementById('gsheet').className='on';
 }
-function closeGramSheet(){document.getElementById('gsheet').className='';}
+function closeGramSheet(){
+  document.getElementById('gsheet').className='';
+  gsHideEdit();
+}
 function gsKcalFor(grams){return Math.round((gsFood.p||0)*grams/100);}
+function gsGramsFor(kcal){return Math.round(kcal*100/(gsFood.p||1));}
+function gsHideEdit(){
+  document.getElementById('gsKcalDisplay').style.display='';
+  document.getElementById('gsKcalEdit').style.display='none';
+}
+function gsShowEdit(){
+  document.getElementById('gsKcalDisplay').style.display='none';
+  var ed=document.getElementById('gsKcalEdit');ed.style.display='';
+  var inp=document.getElementById('gsKcalInp');
+  inp.value=gsKcalFor(gsGrams);
+  inp.focus();inp.select();
+}
 function gsUpdate(){
   document.getElementById('gsGramVal').textContent=gsGrams;
   document.getElementById('gsKcal').textContent=gsKcalFor(gsGrams);
-  // highlight matching quick chip
+  // sync slider
+  var sl=document.getElementById('gsSlider');
+  if(sl&&parseInt(sl.value)!==gsGrams)sl.value=gsGrams;
+  // highlight chips
   document.querySelectorAll('#gsQuick .gsheet-qbtn').forEach(function(b){
-    b.classList.toggle('on', parseInt(b.textContent)===gsGrams);
+    var gEl=b.querySelector('span:last-child');
+    var gVal=gEl?parseInt(gEl.textContent):0;
+    b.style.background=gVal===gsGrams?'linear-gradient(135deg,#2563eb,#7c3aed)':'';
+    b.style.color=gVal===gsGrams?'#fff':'';
+    b.style.borderColor=gVal===gsGrams?'transparent':'';
   });
 }
 
 function wireFoodPicker(){
-  // fp2
   var back=document.getElementById('fp2Back');if(back)back.addEventListener('click',closeFp2);
   var fs=document.getElementById('fp2Search');if(fs)fs.addEventListener('input',function(){fp2Q=this.value;renderFp2List();});
-  // gram sheet
+  // slider
   var sl=document.getElementById('gsSlider');
-  if(sl)sl.addEventListener('input',function(){gsGrams=parseInt(this.value);gsUpdate();});
+  if(sl)sl.addEventListener('input',function(){gsGrams=parseInt(this.value);gsHideEdit();gsUpdate();});
+  // tap kcal number to edit
+  var kcalBig=document.getElementById('gsKcalBig');
+  if(kcalBig)kcalBig.addEventListener('click',function(e){
+    if(document.getElementById('gsKcalEdit').style.display==='none'){gsShowEdit();}
+  });
+  // kcal input → reverse-calc grams
+  var ki=document.getElementById('gsKcalInp');
+  if(ki){
+    ki.addEventListener('input',function(){
+      var kcal=parseInt(this.value)||0;
+      if(kcal>0){
+        gsGrams=gsGramsFor(kcal);
+        document.getElementById('gsGramVal').textContent=gsGrams;
+        var sl2=document.getElementById('gsSlider');
+        if(sl2)sl2.value=Math.min(parseInt(sl2.max),gsGrams);
+        document.querySelectorAll('#gsQuick .gsheet-qbtn').forEach(function(b){
+          b.style.background='';b.style.color='';b.style.borderColor='';
+        });
+      }
+    });
+    ki.addEventListener('blur',function(){
+      var kcal=parseInt(this.value)||0;
+      if(kcal>0){gsGrams=gsGramsFor(kcal);}
+      gsHideEdit();gsUpdate();
+    });
+    ki.addEventListener('keydown',function(e){
+      if(e.key==='Enter'){e.preventDefault();this.blur();}
+      if(e.key==='Escape'){gsHideEdit();gsUpdate();}
+    });
+  }
+  // close on backdrop
   var gov=document.getElementById('gsheet');
   if(gov)gov.addEventListener('click',function(e){if(e.target===this)closeGramSheet();});
   var save=document.getElementById('gsSave');
   if(save)save.addEventListener('click',function(){
+    // if editing kcal manually, finalize
+    if(document.getElementById('gsKcalEdit').style.display!=='none'){
+      var kcal2=parseInt(document.getElementById('gsKcalInp').value)||0;
+      if(kcal2>0)gsGrams=gsGramsFor(kcal2);
+      gsHideEdit();gsUpdate();
+    }
     var kcal=gsKcalFor(gsGrams);
     closeGramSheet();
     if(gsOnSave)gsOnSave(gsGrams,kcal);
@@ -2216,7 +2366,7 @@ var manifest={
   description:'Deficit tracking, body metrics, gym, AI analysis',
   start_url:'.',display:'standalone',orientation:'portrait',
   background_color:'#f4f4fb',theme_color:'#4f46e5',
-  icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2356ab2f'/%3E%3Cstop offset='100%25' stop-color='%23243b0e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='114' fill='url(%23g)'/%3E%3Cpath d='M160 340 L200 240 L256 300 L310 180 L352 260' stroke='white' stroke-width='28' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='352' cy='260' r='18' fill='white'/%3E%3Cpath d='M120 370 L392 370' stroke='rgba(255,255,255,0.3)' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}]
+  icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563eb'/%3E%3Cstop offset='100%25' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='112' fill='url(%23bg)'/%3E%3Ctext x='256' y='348' font-family='Helvetica Neue%2CArial%2Csans-serif' font-size='320' font-weight='900' text-anchor='middle' fill='white'%3ES%3C%2Ftext%3E%3C%2Fsvg%3E",sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}]
 };
 try{
   var mb=new Blob([JSON.stringify(manifest)],{type:'application/json'});
